@@ -9,13 +9,28 @@ import geopandas as gpd
 from geopandas import GeoDataFrame as GDF
 from pandas import DataFrame as DF
 import shapely
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, MultiPolygon
 import pyproj
 import rasterio.crs
 
 
+def close_holes(in_geo: Union[GDF, Polygon]) -> Union[GDF, Polygon]:
+    """Close polygon holes by limitation to the exterior ring."""
+    def _close_holes(poly: Polygon):
+        if poly.interiors:
+            return Polygon(list(poly.exterior.coords))
+        else:
+            return poly
+
+    if isinstance(in_geo, Polygon):
+        return _close_holes(in_geo)
+    elif isinstance(in_geo, GDF):
+        in_geo.geometry = in_geo.geometry.apply(lambda _p: _close_holes(_p))
+        return in_geo
+
+
 def buffer_zero(in_geo: Union[GDF, Polygon]) -> Union[GDF, Polygon]:
-    """Make self-intersecting, invalid geometries in geodataframe valid by buffering with 0."""
+    """Make invalid polygons (due to self-intersection) valid by buffering with 0."""
     if isinstance(in_geo, Polygon):
         if in_geo.is_valid is False:
             return in_geo.buffer(0)
@@ -27,21 +42,6 @@ def buffer_zero(in_geo: Union[GDF, Polygon]) -> Union[GDF, Polygon]:
             return in_geo
         else:
             return in_geo
-
-
-def close_holes(in_geo: Union[GDF, Polygon]) -> Union[GDF, Polygon]:
-    """Close polygon holes by limiting to the exterior ring."""
-    def _close_holes(poly):
-        if poly.interiors:
-            return Polygon(list(poly.exterior.coords))
-        else:
-            return poly
-
-    if isinstance(in_geo, Polygon):
-        return _close_holes(in_geo)
-    elif isinstance(in_geo, GDF):
-        in_geo.geometry = in_geo.geometry.apply(lambda _p: _close_holes(_p))
-        return in_geo
 
 
 def explode_mp(df: GDF) -> GDF:
@@ -127,7 +127,7 @@ def reduce_precision(ingeo: Union[Polygon, GDF], precision: int=3) -> Union[Poly
     Returns:
         Result polygon or geodataframe, same type as input.
     """
-    def _set_precision(poly: Polygon, precision: int) -> Polygon:
+    def _reduce_precision(poly: Polygon, precision: int) -> Polygon:
         geojson = shapely.geometry.mapping(poly)
         geojson['coordinates'] = np.round(np.array(geojson['coordinates']), precision)
         poly = shapely.geometry.shape(geojson)
@@ -136,26 +136,14 @@ def reduce_precision(ingeo: Union[Polygon, GDF], precision: int=3) -> Union[Poly
         return poly
 
     if isinstance(ingeo, Polygon):
-        return _set_precision(poly=ingeo, precision=precision)
+        return _reduce_precision(poly=ingeo, precision=precision)
     elif isinstance(ingeo, GDF):
-        ingeo.geometry = ingeo.geometry.apply(lambda _p: _set_precision(poly=_p, precision=precision))
+        ingeo.geometry = ingeo.geometry.apply(lambda _p: _reduce_precision(poly=_p, precision=precision))
         return ingeo
 
 
-# def invert_y_axis(ingeo: Union[Polygon, GDF],
-#                   ):
-# Optional y-axis inversion (e.g. for COCOjson format).
-#     # invert_y(bool): e.g.
-#     # for COCOjson format.
-#
-#     elif invert_y is True:
-#     # Subtract point of origin of poly_bbox, invert y-axis (required by COCO format!)
-#     x_coords, y_coords = poly.exterior.coords.xy
-#     p_origin = shapely.geometry.Polygon([[x - minx, h_poly - (y - miny)] for x, y in zip(x_coords, y_coords)])
-
-
 def to_pixelcoords(ingeo: Union[Polygon, GDF],
-                   image_bounds: Union[rasterio.coords.BoundingBox, tuple],
+                   reference_bounds: Union[rasterio.coords.BoundingBox, tuple],
                    scale: bool=False,
                    nrows: int=None,
                    ncols: int=None
@@ -166,7 +154,8 @@ def to_pixelcoords(ingeo: Union[Polygon, GDF],
 
     Input:
         ingeo: input geodataframe or shapely Polygon.
-        image_bounds:  Bounding box.
+        reference_bounds:  Bounding box object or tuple of reference (e.g. image chip) in format (left, bottom,
+            right, top)
         scale: Scale the polygons to the image size/resolution. Requires image array nrows and ncols parameters.
         nrows: image array nrows, required for scale.
         ncols: image array ncols, required for scale.
@@ -174,14 +163,14 @@ def to_pixelcoords(ingeo: Union[Polygon, GDF],
     Returns:
         Result polygon or geodataframe, same type as input.
     """
-    def _to_pixelcoords(poly, image_bounds, scale, nrows, ncols):
+    def _to_pixelcoords(poly: Polygon, reference_bounds, scale, nrows, ncols):
         try:
-            minx, miny, maxx, maxy = image_bounds
+            minx, miny, maxx, maxy = reference_bounds
             w_poly, h_poly = (maxx - minx, maxy - miny)
         except (TypeError, ValueError):
             raise Exception(
-                f'image_bounds argument is of type {type(image_bounds)}, needs to be a tuple or rasterio bounding box '
-                f'instance. Can be delineated from transform, nrows, ncols via rasterio.transform.image_bounds')
+                f'reference_bounds argument is of type {type(reference_bounds)}, needs to be a tuple or rasterio bounding box '
+                f'instance. Can be delineated from transform, nrows, ncols via rasterio.transform.reference_bounds')
 
         # Subtract point of origin of image bbox.
         x_coords, y_coords = poly.exterior.coords.xy
@@ -197,20 +186,46 @@ def to_pixelcoords(ingeo: Union[Polygon, GDF],
             return shapely.affinity.scale(p_origin, xfact=x_scaler, yfact=y_scaler, origin=(0, 0, 0))
 
     if isinstance(ingeo, Polygon):
-        return _to_pixelcoords(poly=ingeo, image_bounds=image_bounds, scale=scale, nrows=nrows, ncols=ncols)
+        return _to_pixelcoords(poly=ingeo, reference_bounds=reference_bounds, scale=scale, nrows=nrows, ncols=ncols)
     elif isinstance(ingeo, GDF):
-        ingeo.geometry = ingeo.geometry.apply(lambda _p: _to_pixelcoords(poly=_p, image_bounds=image_bounds,
+        ingeo.geometry = ingeo.geometry.apply(lambda _p: _to_pixelcoords(poly=_p, reference_bounds=reference_bounds,
                                                                          scale=scale, nrows=nrows, ncols=ncols))
         return ingeo
 
 
-def reclassify(df: Union[GDF, DF],
-               rcl_scheme: Dict,
-               col_classlabels: str= 'lcsub',
-               col_classids: str= 'lcsub_id',
-               drop_other_classes: bool=True
-               ) -> Union[GDF, DF]:
-    """Reclassify class label and class ids.
+def invert_y_axis(ingeo: Union[Polygon, GDF],
+                  reference_height: int
+                  ) -> Union[Polygon, GDF]:
+    """Invert y-axis of polygon or geodataframe geometries in reference to a bounding box e.g. of an image chip.
+
+    Usage e.g. for COCOJson format.
+
+    Args:
+        ingeo: Input Polygon or geodataframe.
+        reference_height: Height (in coordinates or rows) of reference object (polygon or image, e.g. image chip.
+
+    Returns:
+        Result polygon or geodataframe, same type as input.
+    """
+    def _invert_y_axis(poly: Polygon=ingeo, reference_height=reference_height):
+        x_coords, y_coords = poly.exterior.coords.xy
+        p_inverted_y_axis = shapely.geometry.Polygon([[x, reference_height - y] for x, y in zip(x_coords, y_coords)])
+        return p_inverted_y_axis
+
+    if isinstance(ingeo, Polygon):
+        return _invert_y_axis(poly=ingeo, reference_height=reference_height)
+    elif isinstance(ingeo, GDF):
+        ingeo.geometry = ingeo.geometry.apply(lambda _p: _invert_y_axis(poly=_p, reference_height=reference_height))
+        return ingeo
+
+
+def reclassify_col(df: Union[GDF, DF],
+                   rcl_scheme: Dict,
+                   col_classlabels: str= 'lcsub',
+                   col_classids: str= 'lcsub_id',
+                   drop_other_classes: bool=True
+                   ) -> Union[GDF, DF]:
+    """Reclassify class label and class ids in a dataframe column.
 
     # TODO: Make more efficient!
     Args:
