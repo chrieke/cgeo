@@ -6,31 +6,30 @@ import pickle
 import time
 from functools import wraps
 from urllib.request import urlopen
+import sys
 
 import pandas as pd
 from IPython.display import display
 
 
 def new_pickle(out_path: Path, data):
-    """
-    Write data to new pickle file.
-    """
+    """Write data to new pickle file."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "wb") as f:
         pickle.dump(data, f)
 
 
 def read_or_new_pickle(path: Path, default_data: Union[Callable, Any]) -> Any:
-    """
-    Write data to new pickle file or read pickle if that file already exists.
+    """Write data to new pickle file or read pickle if that file already exists.
 
     Args:
-        path (Path): in/output pickle file path.
-        default_data (Union[Callable, Any]): Data that is written to a pickle file if the pickle does not already exist.
-                                             When giving a function, do not call the function, only give the function
-                                             object name. Does currently not accept additional function arguments.
+        path: in/output pickle file path.
+        default_data: Data that is written to a pickle file if the pickle does not already exist.
+            When giving a function, do not call the function, only give the function
+            object name. Does currently not accept additional function arguments.
 
-    Returns (Any): Contents of the read or newly created pickle file.
+    Returns:
+        Contents of the read or newly created pickle file.
     """
     try:
         with open(path, "rb") as f:
@@ -47,8 +46,7 @@ def read_or_new_pickle(path: Path, default_data: Union[Callable, Any]) -> Any:
 
 
 def lprun(func):
-    """
-    Line profile decorator.
+    """Line profile decorator.
 
     Put @lprun on the function you want to profile.
     From pavelpatrin: https://gist.github.com/pavelpatrin/5a28311061bf7ac55cdd
@@ -65,16 +63,31 @@ def lprun(func):
 
 
 def printfull(df):
-    """
-    Displays full dataframe. Prints if not in Notebook.
-    """
+    """Displays full dataframe (deactivates rows/columns wrapper). Prints if not in Notebook."""
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         display(df)
 
 
-def download_url(url, out_path):
+def sizeof_memvariables(locals):
+    """Prints size of all variables in memory in human readable output.
+    
+    By Fred Cirera, after https://stackoverflow.com/a/1094933/1870254
     """
-    Download file from URL.
+
+    def sizeof_fmt(num, suffix='B'):
+        for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+            if abs(num) < 1024.0:
+                return "%3.1f%s%s" % (num, unit, suffix)
+            num /= 1024.0
+        return "%.1f%s%s" % (num, 'Yi', suffix)
+
+    for name, size in sorted(((name, sys.getsizeof(value)) for name,value in locals().items()),
+                             key= lambda x: -x[1])[:10]:
+        print("{:>30}: {:>8}".format(name,sizeof_fmt(size)))
+    
+
+def download_url(url, out_path):
+    """Download file from URL.
 
     Example: download_file("url", 'data.tif')
     """
@@ -84,13 +97,12 @@ def download_url(url, out_path):
 
 
 def print_file_tree(dir: Path=None):
-    """
-    Print file tree.
+    """Print file tree of the selected directory.
 
     Taken from https://realpython.com/python-pathlib/
 
     Args:
-        dir(Path): The directory to print the file tree for. Defaults to current working directory.
+        dir: The directory to print the file tree for. Defaults to current working directory.
     """
     if dir is None:
         dir = Path.cwd()
@@ -102,9 +114,7 @@ def print_file_tree(dir: Path=None):
 
 
 def track_time(task):
-    """
-    Track time start/end of running function.
-    """
+    """Track time start/end of running function."""
     start_time = time.time()
     state = task.status()['state']
     print('RUNNING...')

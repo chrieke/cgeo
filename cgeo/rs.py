@@ -4,9 +4,7 @@ import numpy as np
 
 
 class Indices(object):
-    """
-    Remote sensing indices from numpy arrays.
-    """
+    """Remote sensing indices from numpy arrays."""
     @staticmethod
     def ndvi(nir, red):
         # nir = nir.astype(np.float32)
