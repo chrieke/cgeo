@@ -1,6 +1,6 @@
 # other.py
 
-from typing import Union, Any, Callable
+from typing import Union, Any, Callable, Tuple, Dict
 from pathlib import Path
 import pickle
 import time
@@ -9,39 +9,74 @@ from urllib.request import urlopen
 import sys
 
 import pandas as pd
+import json
 from IPython.display import display
 
 
-def new_pickle(out_path: Path, data):
-    """Write data to new pickle file."""
+def new_save(out_path: Path, data, file_format: str='pickle'):
+    """(Over)write data to new pickle/json file."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "wb") as f:
-        pickle.dump(data, f)
+    if file_format == 'pickle':
+        with open(out_path, "wb") as f:
+            pickle.dump(data, f)
+    elif file_format == 'json':
+        with open(out_path, "w") as f:
+            json.dump(data, f, indent=4)
 
 
-def read_or_new_pickle(path: Path, default_data: Union[Callable, Any]) -> Any:
-    """Write data to new pickle file or read pickle if that file already exists.
+def read_saved(in_path: Path, file_format: str='pickle'):
+    """Read saved pickle/json file."""
+    if file_format == 'pickle':
+        with open(in_path, "rb") as f:
+            data = pickle.load(f)
+    elif file_format == 'json':
+        with open(in_path, "r") as f:
+            data = json.load(f)
+    return data
 
+
+def read_or_new_save(path: Path,
+                     default_data: Union[Callable, Any],
+                     callable_args: Dict=None,
+                     file_format: str='pickle'
+                     ) -> Any:
+    """Write data to new pickle/json file or read pickle/json if that file already exists.
+
+    Example:
+        df = cgeo.other.read_or_new_save(path=Path('output\preprocessed_marker_small.pkl'),
+                                         default_data=preprocess_vector,
+                                         callable_args={'inpath': fp_fields, 'meta': meta})
     Args:
-        path: in/output pickle file path.
-        default_data: Data that is written to a pickle file if the pickle does not already exist.
+        path: in/output pickle/json file path.
+        file_format: Either 'pickle' or 'json'.
+        default_data: Data that is written to a pickle/json file if the pickle/json does not already exist.
             When giving a function, do not call the function, only give the function
-            object name. Does currently not accept additional function arguments.
+            object name. Function arguments can be provided via callable_args.
+        callable_args: args for additional function arguments when default_data is a callable function.
 
     Returns:
-        Contents of the read or newly created pickle file.
+        Contents of the read or newly created pickle/json file.
     """
     try:
-        with open(path, "rb") as f:
-            data = pickle.load(f)
-            print('Reading from pickle file...')
+        if file_format == 'pickle':
+            data = read_saved(path, file_format=file_format)
+        elif file_format == 'json':
+            data = read_saved(path, file_format=file_format)
+        print(f'Reading from {file_format} file... {path.name}')
     except (FileNotFoundError, OSError, IOError, EOFError):
-        if callable(default_data):
-            data = default_data()
-        else:
+        if not callable(default_data):
             data = default_data
-        print('Writing new pickle file...')
-        new_pickle(out_path=path, data=data)
+        else:
+            if callable_args is None:
+                data = default_data()
+            else:
+                data = default_data(**callable_args)
+        print(f'Writing new {file_format} file... {path.name}')
+        if file_format == 'pickle':
+            new_save(out_path=path, data=data, file_format=file_format)
+        elif file_format == 'json':
+            new_save(out_path=path, data=data, file_format=file_format)
+
     return data
 
 
@@ -82,8 +117,8 @@ def sizeof_memvariables(locals):
         return "%.1f%s%s" % (num, 'Yi', suffix)
 
     for name, size in sorted(((name, sys.getsizeof(value)) for name,value in locals().items()),
-                             key= lambda x: -x[1])[:10]:
-        print("{:>30}: {:>8}".format(name,sizeof_fmt(size)))
+                             key=lambda x: -x[1])[:10]:
+        print("{:>30}: {:>8}".format(name, sizeof_fmt(size)))
     
 
 def download_url(url, out_path):
