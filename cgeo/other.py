@@ -1,12 +1,13 @@
 # other.py
 
-from typing import Union, Any, Callable, Tuple, Dict
+from typing import Union, Any, Callable, Tuple, Dict, Iterable
 from pathlib import Path
 import pickle
 import time
 from functools import wraps
 from urllib.request import urlopen
 import sys
+from concurrent.futures import as_completed, ProcessPoolExecutor, ThreadPoolExecutor
 
 import pandas as pd
 import json
@@ -159,3 +160,39 @@ def track_time(task):
     elapsed_time = time.time() - start_time
     print('Done in', elapsed_time, 's')
     print(task.status())
+
+
+def multithread_iterable(func: Callable,
+                         iterable: Iterable,
+                         func_kwargs: Dict=None,
+                         max_workers: int=2,
+                         iter_is_tuple=False):
+    """Wrapper for simplified multithreading of iterable.
+
+    Uses concurrent.futures.ThreadPoolExecutor instead of manually spinning up threads via the threading module.
+
+    Args:
+        func: callable function.
+        iterable: list, generator etc. that should be iterated over via one thread per iteration. If the iterable
+            yields a tuple,
+        func_kwargs: additional function arguments.
+        max_workers: number of threads.
+        iter_is_tuple: Set True if iterable yields tuples.
+
+    Returns:
+        The function return value in a list.
+
+    Example:
+        def task(i, iter, add=2):   # i and iter are required arguments!
+            print("Processing {}".format(i))
+            return iter*iter + add
+        print(multithreading(func=task, iterable=[2,3,4], func_kwargs={'add':10}, max_workers=2))
+    """
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        if not iter_is_tuple:
+            futures = [executor.submit(func, i, iter, **func_kwargs) for i, iter in enumerate(iterable)]
+        else:
+            futures = [executor.submit(func, i, *iter, **func_kwargs) for i, iter in enumerate(iterable)]
+
+        res = [fut.result() for fut in as_completed(futures)]
+        return res
