@@ -227,8 +227,7 @@ def roman_numbers_to_arrays(text_list: List[str],
 
     widths = []
     for text in text_list:
-        size = font.getsize(text)  # calc the size of text in pixels
-        w, h = font.getsize(text)
+        w, h = font.getsize(text)  # calc the size of text in pixels
         h *= 2
         widths.append(w)
     w, h = max(widths), h
