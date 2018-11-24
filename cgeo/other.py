@@ -1,6 +1,6 @@
 # other.py
 
-from typing import Union, Any, Callable, Tuple, Dict, Iterable
+from typing import Union, Any, Callable, Tuple, Dict, Iterable, List
 from pathlib import Path
 import pickle
 import time
@@ -11,6 +11,8 @@ from concurrent.futures import as_completed, ProcessPoolExecutor, ThreadPoolExec
 
 import pandas as pd
 import json
+import numpy as np
+import PIL
 from IPython.display import display
 
 
@@ -196,3 +198,54 @@ def multithread_iterable(func: Callable,
 
         res = [fut.result() for fut in as_completed(futures)]
         return res
+
+
+def roman_numbers_to_arrays(text_list: List[str],
+                            fontsize: int = 12,
+                            display=True
+                            ) -> List[np.array]:
+    """Create binary arrays displaying Roman numbers.
+
+    Inspired by https://stackoverflow.com/questions/36384353/generate-pixel-matrices-from-characters-in-string
+    Args:
+        text_list: List of Roman numbers as string. Defaults to I-X.
+        fontsize: Should be at least 12, otherwise deformations
+        display: In addition to returning the arrays plot them.
+
+    Returns:
+        List of binary numpy arrays, all with the same dimensions.
+
+    Example: roman_arrays = roman_to_pixels(['I', 'II'], 22, display=False)
+    """
+    font = PIL.ImageFont.truetype('arialbd.ttf', fontsize)
+
+    if not text_list:
+        roman = {1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X'}
+        text_list = list(roman.values())
+    if fontsize < 12:
+        raise ValueError('fontsize needs to be at least 12, smaller will cause font deformations')
+
+    widths = []
+    for text in text_list:
+        size = font.getsize(text)  # calc the size of text in pixels
+        w, h = font.getsize(text)
+        h *= 2
+        widths.append(w)
+    w, h = max(widths), h
+
+    arrays = []
+    for text in text_list:
+        image = PIL.Image.new('L', (w, h), 1)
+        draw = PIL.ImageDraw.Draw(image)
+        draw.text((0, 0), text, font=font)
+        arr = np.asarray(image)
+        arr = np.where(arr, 0, 1)
+        arr = arr[(arr != 0).any(axis=1)]
+        arrays.append(arr)
+
+        if display is True:
+            result = np.where(arr, '#', ' ')
+            print('shape', arr.shape)
+            print('\n'.join([''.join(row) for row in result]))
+
+    return arrays

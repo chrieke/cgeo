@@ -98,7 +98,7 @@ def clip(df: GDF,
     df.geometry = df.geometry.apply(lambda _p: _p.intersection(clip_poly))
     # df = gpd.overlay(df, clip_poly, how='intersection')  # Slower.
 
-    row_idxs_mp = df.index[df.geometry.geom_type == 'MultiPolygons'].tolist()
+    row_idxs_mp = df.index[df.geometry.geom_type == 'MultiPolygon'].tolist()
 
     if not row_idxs_mp:
         return df
