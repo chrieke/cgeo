@@ -25,28 +25,31 @@ def new_save(out_path: Path, data, file_format: str='pickle'):
     elif file_format == 'json':
         with open(out_path, "w") as f:
             json.dump(data, f, indent=4)
+    print(f'Writing new {file_format} file... {out_path.name}')
 
 
-def read_saved(in_path: Path, file_format: str='pickle'):
-    """Read saved pickle/json file."""
+def load_saved(in_path: Path, file_format: str='pickle'):
+    """Load saved pickle/json file."""
+
     if file_format == 'pickle':
         with open(in_path, "rb") as f:
             data = pickle.load(f)
     elif file_format == 'json':
         with open(in_path, "r") as f:
             data = json.load(f)
+    print(f'Loading from {file_format} file... {in_path.name}')
     return data
 
 
-def read_or_new_save(path: Path,
+def load_or_new_save(path: Path,
                      default_data: Union[Callable, Any],
                      callable_args: Dict=None,
                      file_format: str='pickle'
                      ) -> Any:
-    """Write data to new pickle/json file or read pickle/json if that file already exists.
+    """Write data to new pickle/json file or load pickle/json if that file already exists.
 
     Example:
-        df = cgeo.other.read_or_new_save(path=Path('output\preprocessed_marker_small.pkl'),
+        df = cgeo.other.load_or_new_save(path=Path('output\preprocessed_marker_small.pkl'),
                                          default_data=preprocess_vector,
                                          callable_args={'inpath': fp_fields, 'meta': meta})
     Args:
@@ -58,14 +61,13 @@ def read_or_new_save(path: Path,
         callable_args: args for additional function arguments when default_data is a callable function.
 
     Returns:
-        Contents of the read or newly created pickle/json file.
+        Contents of the loaded or newly created pickle/json file.
     """
     try:
         if file_format == 'pickle':
-            data = read_saved(path, file_format=file_format)
+            data = load_saved(path, file_format=file_format)
         elif file_format == 'json':
-            data = read_saved(path, file_format=file_format)
-        print(f'Reading from {file_format} file... {path.name}')
+            data = load_saved(path, file_format=file_format)
     except (FileNotFoundError, OSError, IOError, EOFError):
         if not callable(default_data):
             data = default_data
@@ -74,7 +76,6 @@ def read_or_new_save(path: Path,
                 data = default_data()
             else:
                 data = default_data(**callable_args)
-        print(f'Writing new {file_format} file... {path.name}')
         if file_format == 'pickle':
             new_save(out_path=path, data=data, file_format=file_format)
         elif file_format == 'json':
@@ -164,11 +165,56 @@ def track_time(task):
     print(task.status())
 
 
+def get_bands_in_folder(indir: Union[Path, str], sensor='s2') -> pd.DataFrame:
+    """Collects Sentinel-2 or Landsat-8 band file information in input directory to a pandas dataframe.
+
+    Expects SAFE format filenames, but arbitrary (sub)folder structure. Works with both tiff or jp2 format.
+
+    Args:
+        indir: input directory. Arbitrary (sub)folder structure.
+        sensor: Satellite sensor, sentinel-2 's2' or landsat-8 'l8'
+
+    Returns:
+        pandas dataframe. The columns time and tile are multi-index.
+        time       tile   band band_name    file
+        2017-10-20 32ULB  B02  blue         \\gemupcp00503\D_Share\Indices_test\mit_safe\S...
+                                                B03  green        \\gemupcp00503\D_Share\Indices_test\mit_safe\S...
+    Examples usages of results dataframe:
+        - df.reset_index() # Dissolves multi-index (every row has every value)
+        - for date, new_df in df.groupby(level=0):  # loop over dates, return "subdataframe" per date.
+        - dates_list = df_layers_all.index.get_level_values(0).unique()
+    """
+    band_names_s2 = {'B01': 'coastal', 'B02': 'blue', 'B03': 'green', 'B04': 'red', 'B05': 'rededge_1',
+                     'B06': 'rededge_2', 'B07': 'rededge_3', 'B08': 'nir', 'B8A': 'watervapour', 'B10': 'cirrus',
+                     'B11': 'swir_1', 'B12': 'swir_2', 'SLC': 'slc'}
+
+    band_names_l8 = {}
+
+    band_names_fmask = {'clear_land_pixel': 0, 'clear_water_pixel': 1, 'cloud_shadow': 2,
+                        'snow': 3, 'cloud': 4, 'no_observation': 255}
+
+    paths = Path(indir).rglob("*.[jt][pi][2f]")
+    # Drop non-relevant bands e.g. quality bands and other resolutions.
+    paths = [path for path in paths if any(f'_{x}_10m' in str(path) for x in band_names_s2.keys())]
+    stems = [path.stem for path in paths]
+
+    time_tile_sid_band = [(stem.split("_")[2].split("T")[0],  #20171020
+                          stem.split("_")[1][1:],  #32ULB
+                          stem.split("_")[3],  # B07
+                          ) for stem in stems]
+    df_layers = pd.DataFrame(time_tile_sid_band, columns=["time", "tile", "band"])
+    df_layers["time"] = pd.to_datetime(df_layers.time)
+    df_layers["band_name"] = [band_names_s2[band] for band in df_layers.band]
+    df_layers["file"] = [str(path) for path in paths]
+    df_layers = df_layers.set_index(["time", "tile", "band", "band_name"])
+
+    return df_layers
+
+
 def multithread_iterable(func: Callable,
                          iterable: Iterable,
                          func_kwargs: Dict=None,
-                         max_workers: int=2,
-                         iter_is_tuple=False):
+                         max_workers: int=2):
     """Wrapper for simplified multithreading of iterable.
 
     Uses concurrent.futures.ThreadPoolExecutor instead of manually spinning up threads via the threading module.
@@ -179,7 +225,6 @@ def multithread_iterable(func: Callable,
             yields a tuple,
         func_kwargs: additional function arguments.
         max_workers: number of threads.
-        iter_is_tuple: Set True if iterable yields tuples.
 
     Returns:
         The function return value in a list.
@@ -191,7 +236,7 @@ def multithread_iterable(func: Callable,
         print(multithreading(func=task, iterable=[2,3,4], func_kwargs={'add':10}, max_workers=2))
     """
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        if not iter_is_tuple:
+        if not isinstance(iterable, tuple):
             futures = [executor.submit(func, i, iter, **func_kwargs) for i, iter in enumerate(iterable)]
         else:
             futures = [executor.submit(func, i, *iter, **func_kwargs) for i, iter in enumerate(iterable)]
@@ -248,3 +293,5 @@ def roman_numbers_to_arrays(text_list: List[str],
             print('\n'.join([''.join(row) for row in result]))
 
     return arrays
+
+

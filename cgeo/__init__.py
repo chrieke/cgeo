@@ -1,16 +1,9 @@
-"""cgeo"""
+# cgeo __init__.py
 
 from collections import namedtuple
 import logging
 import warnings
 
-try:
-    from pathlib import Path
-except ImportError:
-    class Path:
-        pass
-
-# Submodules
 import cgeo.other
 import cgeo.img
 import cgeo.rs
