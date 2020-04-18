@@ -1,5 +1,3 @@
-# other.py
-
 from typing import Union, Any, Callable, Tuple, Dict, Iterable, List
 from pathlib import Path
 import pickle

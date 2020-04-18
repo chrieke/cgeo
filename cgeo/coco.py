@@ -1,5 +1,3 @@
-# coco.py
-
 from typing import Union, Tuple, List, Dict
 from pathlib import Path
 import random

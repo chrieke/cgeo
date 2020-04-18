@@ -1,5 +1,3 @@
-# geo.py
-
 import functools
 import warnings
 from typing import Union, Dict

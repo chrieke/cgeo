@@ -1,5 +1,3 @@
-# img.py
-
 from typing import Tuple, Generator, Union
 
 import rasterio.windows
