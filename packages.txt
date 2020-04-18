@@ -3,9 +3,6 @@ tenacity
 click
 tqdm
 geojson
-rasterio
-pandas
-geopandas
 shapely
 folium
 branca
