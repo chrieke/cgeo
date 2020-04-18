@@ -176,3 +176,34 @@ def reproject_shapely(
     )
     geometry = shapely.ops.transform(project, geometry)
     return geometry
+
+
+def get_utm_zone_epsg(lat, lon):
+    """
+    # Adapted from https://stackoverflow.com/questions/18639967/converting-latitude-and-longitude-points-to-utm
+    """
+    import math
+
+    zone_number = (math.floor((lon + 180) / 6) % 60) + 1
+
+    # Special zones for Norway
+    if (lat >= 56.0 and lat < 64.0 and lon >= 3.0 and lon < 12.0):
+        zone_number = 32
+    # Special zones for Svalbard
+    if (lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 9.0):
+        zone_number = 31
+    if (lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 21.0):
+        zone_number = 33
+    if (lat >= 72.0 and lat < 84.0 and lon >= 21.0 and lon < 33.0):
+        zone_number = 35
+    if (lat >= 72.0 and lat < 84.0 and lon >= 33.0 and lon < 42.0):
+        zone_number = 37
+
+    print(zone_number)
+
+    if lat > 0:
+        utm_code = zone_number + 32600
+    else:
+        utm_code = zone_number + 32700
+
+    return utm_code
