@@ -136,9 +136,7 @@ def to_pixelcoords(
         )
 
 
-def invert_y_axis(
-    poly: Polygon, reference_height: int
-) -> Polygon:
+def invert_y_axis(poly: Polygon, reference_height: int) -> Polygon:
     """
     Invert y-axis of polygon in reference to a bounding box e.g. of an image chip.
 
@@ -187,16 +185,16 @@ def get_utm_zone_epsg(lat, lon):
     zone_number = (math.floor((lon + 180) / 6) % 60) + 1
 
     # Special zones for Norway
-    if (lat >= 56.0 and lat < 64.0 and lon >= 3.0 and lon < 12.0):
+    if lat >= 56.0 and lat < 64.0 and lon >= 3.0 and lon < 12.0:
         zone_number = 32
     # Special zones for Svalbard
-    if (lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 9.0):
+    if lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 9.0:
         zone_number = 31
-    if (lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 21.0):
+    if lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 21.0:
         zone_number = 33
-    if (lat >= 72.0 and lat < 84.0 and lon >= 21.0 and lon < 33.0):
+    if lat >= 72.0 and lat < 84.0 and lon >= 21.0 and lon < 33.0:
         zone_number = 35
-    if (lat >= 72.0 and lat < 84.0 and lon >= 33.0 and lon < 42.0):
+    if lat >= 72.0 and lat < 84.0 and lon >= 33.0 and lon < 42.0:
         zone_number = 37
 
     print(zone_number)
