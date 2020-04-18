@@ -9,43 +9,26 @@ import geopandas as gpd
 from geopandas import GeoDataFrame as GDF
 from pandas import DataFrame as DF
 import shapely
-from shapely.geometry import Polygon, MultiPolygon
+from shapely.geometry import Polygon
 import pyproj
 import rasterio.crs
 
 
-def close_holes(in_geo: Union[GDF, Polygon]) -> Union[GDF, Polygon]:
-    """Close polygon holes by limitation to the exterior ring."""
-    def _close_holes(poly: Polygon):
-        if poly.interiors:
-            return Polygon(list(poly.exterior.coords))
-        else:
-            return poly
+def close_holes(poly: Polygon) -> Polygon:
+    """
+    Close polygon holes by limitation to the exterior ring.
 
-    if isinstance(in_geo, Polygon):
-        return _close_holes(in_geo)
-    elif isinstance(in_geo, GDF):
-        in_geo.geometry = in_geo.geometry.apply(lambda _p: _close_holes(_p))
-        return in_geo
-
-
-def buffer_zero(in_geo: Union[GDF, Polygon]) -> Union[GDF, Polygon]:
-    """Make invalid polygons (due to self-intersection) valid by buffering with 0."""
-    if isinstance(in_geo, Polygon):
-        if in_geo.is_valid is False:
-            return in_geo.buffer(0)
-        else:
-            return in_geo
-    elif isinstance(in_geo, GDF):
-        if False in in_geo.geometry.is_valid.unique():
-            in_geo.geometry = in_geo.geometry.apply(lambda _p: _p.buffer(0))
-            return in_geo
-        else:
-            return in_geo
+    Example: in_geo.geometry.apply(lambda _p: _close_holes(_p))
+    """
+    if poly.interiors:
+        return Polygon(list(poly.exterior.coords))
+    else:
+        return poly
 
 
 def explode_mp(df: GDF) -> GDF:
-    """Explode all multi-polygon geometries in a geodataframe into individual polygon geometries.
+    """
+    Explode all multi-polygon geometries in a geodataframe into individual polygon geometries.
 
     Adds exploded polygons as rows at the end of the geodataframe and resets its index.
     """
@@ -64,7 +47,9 @@ def explode_mp(df: GDF) -> GDF:
 
 
 def keep_biggest_poly(df: GDF) -> GDF:
-    """Keep the biggest area-polygon of geodataframe rows with multipolygon geometries."""
+    """
+    Keep the biggest area-polygon of geodataframe rows with multipolygon geometries.
+    """
     row_idxs_mp = df.index[df.geometry.geom_type == 'MultiPolygon'].tolist()
     for idx in row_idxs_mp:
         mp = df.loc[idx].geometry
@@ -72,46 +57,6 @@ def keep_biggest_poly(df: GDF) -> GDF:
         max_area_poly = mp[poly_areas.index(max(poly_areas))]
         df.loc[idx, 'geometry'] = max_area_poly
     return df
-
-
-def clip(df: GDF,
-         clip_poly: Polygon,
-         explode_mp_: bool = False,
-         keep_biggest_poly_: bool = False,
-         ) -> GDF:
-    """Filter and clip geodataframe to clipping geometry.
-
-    The clipping geometry needs to be in the same projection as the geodataframe.
-
-    Args:
-        df: input geodataframe
-        clip_poly: Clipping polygon geometry, needs to be in the same crs as the input geodataframe.
-        explode_mp_: Applies explode_mp function. Append dataframe rows for each polygon in potential
-            multipolygons that were created by the intersection. Resets the dataframe index!
-        keep_biggest_poly_: Applies keep_biggest_poly function. Drops Multipolygons by only keeping the Polygon with
-            the biggest area.
-
-    Returns:
-        Result geodataframe.
-    """
-    df = df[df.geometry.intersects(clip_poly)].copy()
-    df.geometry = df.geometry.apply(lambda _p: _p.intersection(clip_poly))
-    # df = gpd.overlay(df, clip_poly, how='intersection')  # Slower.
-
-    row_idxs_mp = df.index[df.geometry.geom_type == 'MultiPolygon'].tolist()
-
-    if not row_idxs_mp:
-        return df
-    elif not explode_mp_ and (not keep_biggest_poly_):
-        warnings.warn(f"Warning, intersection resulted in {len(row_idxs_mp)} split multipolygons. Use "
-                      f"explode_mp_=True or keep_biggest_poly_=True.")
-        return df
-    elif explode_mp_ and keep_biggest_poly_:
-        raise ValueError('You can only use only "explode_mp" or "keep_biggest"!')
-    elif explode_mp_:
-        return explode_mp(df)
-    elif keep_biggest_poly_:
-        return keep_biggest_poly(df)
 
 
 def reduce_precision(ingeo: Union[Polygon, GDF], precision: int=3) -> Union[Polygon, GDF]:
