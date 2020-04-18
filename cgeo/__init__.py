@@ -7,4 +7,3 @@ import cgeo.other
 import cgeo.img
 import cgeo.rs
 import cgeo.geo
-

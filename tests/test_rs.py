@@ -8,4 +8,4 @@ def test_ndvi():
     ndvi = Indices.ndvi(nir=nir, red=red)
 
     comp_ndvi = np.array(([[-0.9841269], [0.41952506]]))
-    assert(np.allclose(ndvi, comp_ndvi))
+    assert np.allclose(ndvi, comp_ndvi)

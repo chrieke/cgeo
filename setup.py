@@ -13,10 +13,8 @@ setup(
     url="https://github.com/chrieke/cgeo",
     license="MIT",
     packages=find_packages(exclude=("tests", "docs", "examples")),
-    package_data={
-        "": ["_version.txt"]
-    },
+    package_data={"": ["_version.txt"]},
     include_package_data=True,
     zip_safe=False,
-    install_requires=parent_dir.joinpath("requirements.txt").read_text().splitlines()
+    install_requires=parent_dir.joinpath("requirements.txt").read_text().splitlines(),
 )
