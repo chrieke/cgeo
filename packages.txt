@@ -3,13 +3,10 @@ tenacity
 click
 tqdm
 geojson
-shapely
 folium
 branca
-matplotlib
 descartes
 Ipython
-jupyterlab
 mkdocs
 mkdocs-material
 pandoc

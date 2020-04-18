@@ -1,9 +1,11 @@
-import numpy as np
 from typing import List, Dict
+
+import numpy as np
 
 
 class Indices(object):
-    """Provides calculation of various remote sensing indices from numpy arrays.
+    """
+    Provides various remote sensing indices from numpy arrays.
 
     Currently implemented: ndvi, evi, ndwi, brightness
     # TODO: Add more indices

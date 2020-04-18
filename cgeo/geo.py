@@ -1,10 +1,9 @@
 import functools
-from typing import Union, Dict
+from typing import Union
 
 import numpy as np
 import geopandas as gpd
 from geopandas import GeoDataFrame as GDF
-from pandas import DataFrame as DF
 import shapely
 from shapely.geometry import Polygon
 import pyproj

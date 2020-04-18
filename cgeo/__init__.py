@@ -4,6 +4,6 @@ from typing import List, Union, Dict, Tuple
 import logging
 
 import cgeo.other
-import cgeo.img
+import cgeo.image
 import cgeo.rs
 import cgeo.geo

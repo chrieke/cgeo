@@ -149,8 +149,8 @@ def move_coco_val_images(inpath_train_folder, val_chips_list):
     outpath_val_folder = inpath_train_folder.parent / "val2016"
     Path(outpath_val_folder).mkdir(parents=True, exist_ok=True)
     for chip in val_chips_list:
-        Path(rf'{inpath_train_folder}\{chip.replace("val", "train")}.jpg').replace(
-            rf"{outpath_val_folder}\{chip}.jpg"
+        Path(rf'{inpath_train_folder}/{chip.replace("val", "train")}.jpg').replace(
+            rf"{outpath_val_folder}/{chip}.jpg"
         )
 
 
@@ -218,7 +218,8 @@ def plot_coco(inpath_json, inpath_image_folder, start=0, end=2):
         plt.figure(figsize=(5, 5))
         plt.axis("off")
 
-        img = np.asarray(pilimage.open(rf"{inpath_image_folder}\{key}"))
+        in_path = Path(inpath_image_folder) / f"{key}"
+        img = np.asarray(pilimage.open(in_path))
         plt.imshow(img, interpolation="none")
 
         mp = extracted[key]

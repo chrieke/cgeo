@@ -1,4 +1,4 @@
-from typing import Tuple, Generator, Union
+from typing import Tuple, Generator
 
 import rasterio.windows
 from rasterio.windows import Window

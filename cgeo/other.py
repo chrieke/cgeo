@@ -1,11 +1,11 @@
-from typing import Union, Any, Callable, Tuple, Dict, Iterable, List
+from typing import Union, Any, Callable, Dict, Iterable, List
 from pathlib import Path
 import pickle
 import time
 from functools import wraps
 from urllib.request import urlopen
 import sys
-from concurrent.futures import as_completed, ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import as_completed, ThreadPoolExecutor
 
 import pandas as pd
 import json
@@ -15,7 +15,9 @@ from IPython.display import display
 
 
 def new_save(out_path: Path, data, file_format: str = "pickle"):
-    """(Over)write data to new pickle/json file."""
+    """
+    (Over)write data to new pickle/json file.
+    """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if file_format == "pickle":
         with open(out_path, "wb") as f:
@@ -27,7 +29,9 @@ def new_save(out_path: Path, data, file_format: str = "pickle"):
 
 
 def load_saved(in_path: Path, file_format: str = "pickle"):
-    """Load saved pickle/json file."""
+    """
+    Load saved pickle/json file.
+    """
 
     if file_format == "pickle":
         with open(in_path, "rb") as f:
@@ -45,19 +49,21 @@ def load_or_new_save(
     callable_args: Dict = None,
     file_format: str = "pickle",
 ) -> Any:
-    """Write data to new pickle/json file or load pickle/json if that file already exists.
+    """
+    Write data to new pickle/json file or load pickle/json if that file already exists.
 
     Example:
-        df = cgeo.other.load_or_new_save(path=Path('output\preprocessed_marker_small.pkl'),
+        df = cgeo.other.load_or_new_save(path=Path('output/preprocessed_marker_small.pkl'),
                                          default_data=preprocess_vector,
                                          callable_args={'inpath': fp_fields, 'meta': meta})
     Args:
         path: in/output pickle/json file path.
         file_format: Either 'pickle' or 'json'.
-        default_data: Data that is written to a pickle/json file if the pickle/json does not already exist.
-            When giving a function, do not call the function, only give the function
-            object name. Function arguments can be provided via callable_args.
-        callable_args: args for additional function arguments when default_data is a callable function.
+        default_data: Data that is written to a pickle/json file if the pickle/json does
+         not already exist. When giving a function, do not call the function, only give
+         the function object name. Function arguments can be provided via callable_args.
+        callable_args: args for additional function arguments when default_data is a
+            callable function.
 
     Returns:
         Contents of the loaded or newly created pickle/json file.
@@ -84,7 +90,8 @@ def load_or_new_save(
 
 
 def lprun(func):
-    """Line profile decorator.
+    """
+    Line profile decorator.
 
     Put @lprun on the function you want to profile.
     From pavelpatrin: https://gist.github.com/pavelpatrin/5a28311061bf7ac55cdd
@@ -104,13 +111,17 @@ def lprun(func):
 
 
 def printfull(df):
-    """Displays full dataframe (deactivates rows/columns wrapper). Prints if not in Notebook."""
+    """
+    Displays full dataframe (deactivates rows/columns wrapper). Prints if not
+    in Notebook.
+    """
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         display(df)
 
 
 def sizeof_memvariables(locals):
-    """Prints size of all variables in memory in human readable output.
+    """
+    Prints size of all variables in memory in human readable output.
     
     By Fred Cirera, after https://stackoverflow.com/a/1094933/1870254
     """
@@ -130,7 +141,8 @@ def sizeof_memvariables(locals):
 
 
 def download_url(url, out_path):
-    """Download file from URL.
+    """
+    Download file from URL.
 
     Example: download_file("url", 'data.tif')
     """
@@ -140,12 +152,14 @@ def download_url(url, out_path):
 
 
 def print_file_tree(dir: Path = None):
-    """Print file tree of the selected directory.
+    """
+    Print file tree of the selected directory.
 
     Taken from https://realpython.com/python-pathlib/
 
     Args:
-        dir: The directory to print the file tree for. Defaults to current working directory.
+        dir: The directory to print the file tree for. Defaults to current working
+            directory.
     """
     if dir is None:
         dir = Path.cwd()
@@ -157,7 +171,9 @@ def print_file_tree(dir: Path = None):
 
 
 def track_time(task):
-    """Track time start/end of running function."""
+    """
+    Track time start/end of running function.
+    """
     start_time = time.time()
     state = task.status()["state"]
     print("RUNNING...")
@@ -170,9 +186,12 @@ def track_time(task):
 
 
 def get_bands_in_folder(indir: Union[Path, str], sensor="s2") -> pd.DataFrame:
-    """Collects Sentinel-2 or Landsat-8 band file information in input directory to a pandas dataframe.
+    """
+    Collects Sentinel-2 or Landsat-8 band file information in input directory to a
+    pandas dataframe.
 
-    Expects SAFE format filenames, but arbitrary (sub)folder structure. Works with both tiff or jp2 format.
+    Expects SAFE format filenames, but arbitrary (sub)folder structure. Works with both
+    tiff or jp2 format.
 
     Args:
         indir: input directory. Arbitrary (sub)folder structure.
@@ -180,12 +199,10 @@ def get_bands_in_folder(indir: Union[Path, str], sensor="s2") -> pd.DataFrame:
 
     Returns:
         pandas dataframe. The columns time and tile are multi-index.
-        time       tile   band band_name    file
-        2017-10-20 32ULB  B02  blue         \\gemupcp00503\D_Share\Indices_test\mit_safe\S...
-                                                B03  green        \\gemupcp00503\D_Share\Indices_test\mit_safe\S...
     Examples usages of results dataframe:
         - df.reset_index() # Dissolves multi-index (every row has every value)
-        - for date, new_df in df.groupby(level=0):  # loop over dates, return "subdataframe" per date.
+        - for date, new_df in df.groupby(level=0):  # loop over dates, return
+            "subdataframe" per date.
         - dates_list = df_layers_all.index.get_level_values(0).unique()
     """
     band_names_s2 = {
@@ -246,12 +263,13 @@ def multithread_iterable(
 ):
     """Wrapper for simplified multithreading of iterable.
 
-    Uses concurrent.futures.ThreadPoolExecutor instead of manually spinning up threads via the threading module.
+    Uses concurrent.futures.ThreadPoolExecutor instead of manually spinning up threads
+    via the threading module.
 
     Args:
         func: callable function.
-        iterable: list, generator etc. that should be iterated over via one thread per iteration. If the iterable
-            yields a tuple,
+        iterable: list, generator etc. that should be iterated over via one thread per
+            iteration. If the iterable yields a tuple,
         func_kwargs: additional function arguments.
         max_workers: number of threads.
 
@@ -262,7 +280,8 @@ def multithread_iterable(
         def task(i, iter, add=2):   # i and iter are required arguments!
             print("Processing {}".format(i))
             return iter*iter + add
-        print(multithreading(func=task, iterable=[2,3,4], func_kwargs={'add':10}, max_workers=2))
+        print(multithreading(func=task, iterable=[2,3,4], func_kwargs={'add':10},
+            max_workers=2))
     """
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         if not isinstance(iterable, tuple):
@@ -283,9 +302,11 @@ def multithread_iterable(
 def roman_numbers_to_arrays(
     text_list: List[str], fontsize: int = 12, display=True
 ) -> List[np.array]:
-    """Create binary arrays displaying Roman numbers.
+    """
+    Create binary arrays displaying Roman numbers.
 
-    Inspired by https://stackoverflow.com/questions/36384353/generate-pixel-matrices-from-characters-in-string
+    Inspired by https://stackoverflow.com/questions/36384353/generate-pixel-matrices-
+    from-characters-in-string
     Args:
         text_list: List of Roman numbers as string. Defaults to I-X.
         fontsize: Should be at least 12, otherwise deformations
@@ -314,7 +335,7 @@ def roman_numbers_to_arrays(
         text_list = list(roman.values())
     if fontsize < 12:
         raise ValueError(
-            "fontsize needs to be at least 12, smaller will cause font deformations"
+            "fontsize needs to be at least 12, smaller will cause font deformations."
         )
 
     widths = []
