@@ -1,5 +1,6 @@
 import functools
 from typing import Union
+import math
 
 import numpy as np
 import geopandas as gpd
@@ -10,28 +11,33 @@ import pyproj
 import rasterio.crs
 
 
-def get_utm_zone_epsg(lat, lon):
+# pylint: disable=chained-comparison
+def get_utm_zone_epsg(lon: float, lat: float) -> int:
     """
-    # Adapted from https://stackoverflow.com/questions/18639967/converting-latitude-and-longitude-points-to-utm
-    """
-    import math
+    Calculates the suitable UTM crs epsg code for an input geometry point.
 
-    zone_number = (math.floor((lon + 180) / 6) % 60) + 1
+    Args:
+        lon: Longitude of point
+        lat: Latitude of point
+
+    Returns:
+        EPSG code i.e. 32658
+    """
+    zone_number = int((math.floor((lon + 180) / 6) % 60) + 1)
 
     # Special zones for Norway
     if lat >= 56.0 and lat < 64.0 and lon >= 3.0 and lon < 12.0:
         zone_number = 32
     # Special zones for Svalbard
-    if lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 9.0:
-        zone_number = 31
-    if lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 21.0:
-        zone_number = 33
-    if lat >= 72.0 and lat < 84.0 and lon >= 21.0 and lon < 33.0:
-        zone_number = 35
-    if lat >= 72.0 and lat < 84.0 and lon >= 33.0 and lon < 42.0:
-        zone_number = 37
-
-    print(zone_number)
+    elif lat >= 72.0 and lat < 84.0:
+        if lon >= 0.0 and lon < 9.0:
+            zone_number = 31
+        elif lon >= 9.0 and lon < 21.0:
+            zone_number = 33
+        elif lon >= 21.0 and lon < 33.0:
+            zone_number = 35
+        elif lon >= 33.0 and lon < 42.0:
+            zone_number = 37
 
     if lat > 0:
         utm_code = zone_number + 32600
