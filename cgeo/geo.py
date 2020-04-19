@@ -10,6 +10,37 @@ import pyproj
 import rasterio.crs
 
 
+def get_utm_zone_epsg(lat, lon):
+    """
+    # Adapted from https://stackoverflow.com/questions/18639967/converting-latitude-and-longitude-points-to-utm
+    """
+    import math
+
+    zone_number = (math.floor((lon + 180) / 6) % 60) + 1
+
+    # Special zones for Norway
+    if lat >= 56.0 and lat < 64.0 and lon >= 3.0 and lon < 12.0:
+        zone_number = 32
+    # Special zones for Svalbard
+    if lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 9.0:
+        zone_number = 31
+    if lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 21.0:
+        zone_number = 33
+    if lat >= 72.0 and lat < 84.0 and lon >= 21.0 and lon < 33.0:
+        zone_number = 35
+    if lat >= 72.0 and lat < 84.0 and lon >= 33.0 and lon < 42.0:
+        zone_number = 37
+
+    print(zone_number)
+
+    if lat > 0:
+        utm_code = zone_number + 32600
+    else:
+        utm_code = zone_number + 32700
+
+    return utm_code
+
+
 def close_holes(poly: Polygon) -> Polygon:
     """
     Close polygon holes by limitation to the exterior ring.
@@ -18,7 +49,7 @@ def close_holes(poly: Polygon) -> Polygon:
         poly: Input shapely Polygon
 
     Example:
-        in_geo.geometry.apply(lambda p: _close_holes(p))
+        df.geometry.apply(lambda p: close_holes(p))
     """
     if poly.interiors:
         return Polygon(list(poly.exterior.coords))
@@ -66,26 +97,22 @@ def dissolve_mp_biggest(df: GDF) -> GDF:
     return df
 
 
-def reduce_precision(poly: Polygon, precision: int = 3) -> Polygon:
+def invert_y_axis(poly: Polygon, reference_height: int) -> Polygon:
     """
-    Reduces the number of after comma decimals of a shapely Polygon or geodataframe
-    geometries.
+    Invert y-axis of polygon in reference to a bounding box e.g. of an image chip.
 
-    GeoJSON specification recommends 6 decimal places for lat & lon which equates to
-    roughly 10cm of precision (https://github.com/perrygeo/geojson-precision).
+    Usage e.g. for COCOJson format.
 
     Args:
-        poly: Input shapely Polygon.
-        precision: number of after comma values that should remain.
+        ingeo: Input Polygon or geodataframe.
+        reference_height: Height (in coordinates or rows) of reference object
+            (polygon or image, e.g. image chip.
     """
-    geojson = shapely.geometry.mapping(poly)
-    geojson["coordinates"] = np.round(np.array(geojson["coordinates"]), precision)
-    poly = shapely.geometry.shape(geojson)
-    if (
-        not poly.is_valid
-    ):  # Too low precision can lead to invalid polys due to line overlap effects.
-        poly = poly.buffer(0)
-    return poly
+    x_coords, y_coords = poly.exterior.coords.xy
+    p_inverted_y_axis = shapely.geometry.Polygon(
+        [[x, reference_height - y] for x, y in zip(x_coords, y_coords)]
+    )
+    return p_inverted_y_axis
 
 
 def to_pixelcoords(
@@ -136,22 +163,26 @@ def to_pixelcoords(
         )
 
 
-def invert_y_axis(poly: Polygon, reference_height: int) -> Polygon:
+def reduce_precision(poly: Polygon, precision: int = 3) -> Polygon:
     """
-    Invert y-axis of polygon in reference to a bounding box e.g. of an image chip.
+    Reduces the number of after comma decimals of a shapely Polygon or geodataframe
+    geometries.
 
-    Usage e.g. for COCOJson format.
+    GeoJSON specification recommends 6 decimal places for lat & lon which equates to
+    roughly 10cm of precision (https://github.com/perrygeo/geojson-precision).
 
     Args:
-        ingeo: Input Polygon or geodataframe.
-        reference_height: Height (in coordinates or rows) of reference object
-            (polygon or image, e.g. image chip.
+        poly: Input shapely Polygon.
+        precision: number of after comma values that should remain.
     """
-    x_coords, y_coords = poly.exterior.coords.xy
-    p_inverted_y_axis = shapely.geometry.Polygon(
-        [[x, reference_height - y] for x, y in zip(x_coords, y_coords)]
-    )
-    return p_inverted_y_axis
+    geojson = shapely.geometry.mapping(poly)
+    geojson["coordinates"] = np.round(np.array(geojson["coordinates"]), precision)
+    poly = shapely.geometry.shape(geojson)
+    if (
+        not poly.is_valid
+    ):  # Too low precision can lead to invalid polys due to line overlap effects.
+        poly = poly.buffer(0)
+    return poly
 
 
 def reproject_shapely(
@@ -174,34 +205,3 @@ def reproject_shapely(
     )
     geometry = shapely.ops.transform(project, geometry)
     return geometry
-
-
-def get_utm_zone_epsg(lat, lon):
-    """
-    # Adapted from https://stackoverflow.com/questions/18639967/converting-latitude-and-longitude-points-to-utm
-    """
-    import math
-
-    zone_number = (math.floor((lon + 180) / 6) % 60) + 1
-
-    # Special zones for Norway
-    if lat >= 56.0 and lat < 64.0 and lon >= 3.0 and lon < 12.0:
-        zone_number = 32
-    # Special zones for Svalbard
-    if lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 9.0:
-        zone_number = 31
-    if lat >= 72.0 and lat < 84.0 and lon >= 0.0 and lon < 21.0:
-        zone_number = 33
-    if lat >= 72.0 and lat < 84.0 and lon >= 21.0 and lon < 33.0:
-        zone_number = 35
-    if lat >= 72.0 and lat < 84.0 and lon >= 33.0 and lon < 42.0:
-        zone_number = 37
-
-    print(zone_number)
-
-    if lat > 0:
-        utm_code = zone_number + 32600
-    else:
-        utm_code = zone_number + 32700
-
-    return utm_code
