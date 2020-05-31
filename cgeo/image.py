@@ -41,12 +41,13 @@ def get_chip_windows(
             col_off=col_off, row_off=row_off, width=chip_width, height=chip_height
         )
 
-        if skip_partial_chips:
-            if (
+        if skip_partial_chips and (
+            (
                 row_off + chip_height > raster_height
                 or col_off + chip_width > raster_width
-            ):
-                continue
+            )
+        ):
+            continue
 
         chip_window = chip_window.intersection(big_window)
         chip_transform = rasterio.windows.transform(

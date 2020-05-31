@@ -69,9 +69,7 @@ def load_or_new_save(
         Contents of the loaded or newly created pickle/json file.
     """
     try:
-        if file_format == "pickle":
-            data = load_saved(path, file_format=file_format)
-        elif file_format == "json":
+        if file_format in ["pickle", "json"]:
             data = load_saved(path, file_format=file_format)
     except (FileNotFoundError, OSError, IOError, EOFError):
         if not callable(default_data):
@@ -81,11 +79,8 @@ def load_or_new_save(
                 data = default_data()
             else:
                 data = default_data(**callable_args)
-        if file_format == "pickle":
+        if file_format in ["pickle", "json"]:
             new_save(out_path=path, data=data, file_format=file_format)
-        elif file_format == "json":
-            new_save(out_path=path, data=data, file_format=file_format)
-
     return data
 
 
@@ -237,8 +232,9 @@ def get_bands_in_folder(indir: Union[Path, str], sensor="s2") -> pd.DataFrame:
     paths = [
         path
         for path in paths
-        if any(f"_{x}_10m" in str(path) for x in band_names_s2.keys())
+        if any(f"_{x}_10m" in str(path) for x in band_names_s2)
     ]
+
     stems = [path.stem for path in paths]
 
     time_tile_sid_band = [
@@ -295,8 +291,7 @@ def multithread_iterable(
                 for i, iter in enumerate(iterable)
             ]
 
-        res = [fut.result() for fut in as_completed(futures)]
-        return res
+        return [fut.result() for fut in as_completed(futures)]
 
 
 def roman_numbers_to_arrays(

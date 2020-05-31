@@ -29,31 +29,30 @@ class Indices(object):
     def ndvi(self):
         nir = self.nir.astype(np.float32)
         red = self.red.astype(np.float32)
-        ndvi = ((nir) - (red)) / ((nir) + (red))
-        return ndvi
+        return ((nir) - (red)) / ((nir) + (red))
 
     def evi(self):
         nir = self.nir.astype(np.float32)
         red = self.red.astype(np.float32)
         blue = self.blue.astype(np.float32)
-        evi = 2.5 * ((nir - red) / (nir + 6 * red - 7.5 * blue + 1))
-        return evi
+        return 2.5 * ((nir - red) / (nir + 6 * red - 7.5 * blue + 1))
 
     def ndwi(self):
         swir = self.swir.astype(np.float32)
         nir = self.nir.astype(np.float32)
-        index = (nir - swir) / (nir + swir)
-        return index
+        return (nir - swir) / (nir + swir)
 
     def brightness(self):
         swir = self.swir.astype(np.float32)
         nir = self.nir.astype(np.float32)
         red = self.red.astype(np.float32)
         green = self.green.astype(np.float32)
-        brightness = np.sqrt(
-            np.power(green, 2) + np.power(red, 2) + np.power(nir, 2) + np.power(swir, 2)
+        return np.sqrt(
+            np.power(green, 2)
+            + np.power(red, 2)
+            + np.power(nir, 2)
+            + np.power(swir, 2)
         )
-        return brightness
 
 
 class Sensors(object):

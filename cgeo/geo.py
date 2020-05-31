@@ -39,11 +39,7 @@ def get_utm_zone_epsg(lon: float, lat: float) -> int:
         elif lon >= 33.0 and lon < 42.0:
             zone_number = 37
 
-    if lat > 0:
-        epsg_utm = zone_number + 32600
-    else:
-        epsg_utm = zone_number + 32700
-    return epsg_utm
+    return zone_number + 32600 if lat > 0 else zone_number + 32700
 
 
 def buffer_meter(
@@ -79,11 +75,9 @@ def buffer_meter(
     epsg_utm = get_utm_zone_epsg(lon=lon, lat=lat)
     poly_utm = reproject_shapely(geometry=poly, epsg_in=epsg_in, epsg_out=epsg_utm)
     poly_buff = poly_utm.buffer(distance, **kwargs)
-    poly_buff_original_epsg = reproject_shapely(
-        geometry=poly_buff, epsg_in=epsg_utm, epsg_out=epsg_in
-    )
-
-    return poly_buff_original_epsg
+    return reproject_shapely(
+            geometry=poly_buff, epsg_in=epsg_utm, epsg_out=epsg_in
+        )
 
 
 def close_holes(poly: Polygon) -> Polygon:
@@ -154,10 +148,9 @@ def invert_y_axis(poly: Polygon, reference_height: int) -> Polygon:
             (polygon or image, e.g. image chip.
     """
     x_coords, y_coords = poly.exterior.coords.xy
-    p_inverted_y_axis = shapely.geometry.Polygon(
-        [[x, reference_height - y] for x, y in zip(x_coords, y_coords)]
-    )
-    return p_inverted_y_axis
+    return shapely.geometry.Polygon(
+            [[x, reference_height - y] for x, y in zip(x_coords, y_coords)]
+        )
 
 
 def to_pixelcoords(
@@ -196,7 +189,7 @@ def to_pixelcoords(
         [[x - minx, y - miny] for x, y in zip(x_coords, y_coords)]
     )
 
-    if scale is False:
+    if not scale:
         return p_origin
     elif scale is True:
         if ncols is None or nrows is None:
@@ -247,5 +240,4 @@ def reproject_shapely(
     project = pyproj.Transformer.from_proj(
         pyproj.Proj(f"epsg:{str(epsg_in)}"), pyproj.Proj(f"epsg:{str(epsg_out)}")
     )
-    geometry_reprojected = transform(project.transform, geometry)
-    return geometry_reprojected
+    return transform(project.transform, geometry)
