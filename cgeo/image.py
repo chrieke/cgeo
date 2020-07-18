@@ -1,9 +1,9 @@
-from typing import Tuple, Generator
+from typing import Tuple, Generator, Any
+import itertools
 
 import rasterio.windows
 from rasterio.windows import Window
 from shapely.geometry import Polygon
-import itertools
 import shapely
 import affine
 
@@ -13,7 +13,7 @@ def get_chip_windows(
     chip_width: int = 256,
     chip_height: int = 256,
     skip_partial_chips: bool = False,
-) -> Generator[Tuple[Window, Polygon, affine.Affine], any, None]:
+) -> Generator[Tuple[Window, Polygon, affine.Affine], Any, None]:
     """Generator for rasterio windows of specified pixel size to iterate over an image in chips.
 
     Chips are created row wise, from top to bottom of the raster.

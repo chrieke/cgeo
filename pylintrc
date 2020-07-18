@@ -15,6 +15,7 @@ disable=
     duplicate-code,
     logging-fstring-interpolation,
     logging-format-interpolation
+    too-many-locals
 
 [FORMAT]
 max-line-length=120

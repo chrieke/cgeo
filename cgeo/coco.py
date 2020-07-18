@@ -98,7 +98,8 @@ def format_coco(chip_dfs: Dict, chip_width: int, chip_height: int):
             "height": chip_width,
             "width": chip_height,
         }
-        cocojson.setdefault("images", []).append(image)
+        cocojson.setdefault("images", [])
+        cocojson["images"].append(image)
 
         for _, row in chip_dfs[chip_name]["chip_df"].iterrows():
             # Convert geometry to COCO segmentation format:
@@ -132,7 +133,8 @@ def format_coco(chip_dfs: Dict, chip_width: int, chip_height: int):
                 "iscrowd": 0,
                 "segmentation": [coco_xy],
             }
-            cocojson.setdefault("annotations", []).append(annotation)
+            cocojson.setdefault("annotations", [])
+            cocojson["annotations"].append(annotation)
 
             annotation_id += 1
 
@@ -173,13 +175,11 @@ def coco_to_shapely(
         # Get image ids/file names that contain at least one annotation of the selected categories.
         image_ids = sorted(
             list(
-                set(
-                    [
-                        x["image_id"]
-                        for x in data["annotations"]
-                        if x["category_id"] in categories
-                    ]
-                )
+                {
+                    x["image_id"]
+                    for x in data["annotations"]
+                    if x["category_id"] in categories
+                }
             )
         )
     else:

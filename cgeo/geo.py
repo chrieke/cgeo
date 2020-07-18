@@ -6,9 +6,9 @@ import geopandas as gpd
 from geopandas import GeoDataFrame as GDF
 import shapely
 from shapely.geometry import Polygon
+from shapely.ops import transform
 import rasterio.crs
 import pyproj
-from shapely.ops import transform
 
 
 # pylint: disable=chained-comparison
@@ -76,7 +76,7 @@ def buffer_meter(
         lon = poly.centroid.x
         lat = poly.centroid.y
 
-    epsg_utm = get_utm_zone_epsg(lon=lon, lat=lat)
+    epsg_utm = get_utm_zone_epsg(lon=lon, lat=lat)  # type: ignore
     poly_utm = reproject_shapely(geometry=poly, epsg_in=epsg_in, epsg_out=epsg_utm)
     poly_buff = poly_utm.buffer(distance, **kwargs)
     poly_buff_original_epsg = reproject_shapely(
@@ -115,7 +115,7 @@ def explode_mp(df: GDF) -> GDF:
     outdf = df[df.geom_type != "MultiPolygon"]
 
     df_mp = df[df.geom_type == "MultiPolygon"]
-    for idx, row in df_mp.iterrows():
+    for _, row in df_mp.iterrows():
         df_temp = gpd.GeoDataFrame(columns=df_mp.columns)
         df_temp = df_temp.append([row] * len(row.geometry), ignore_index=True)
         for i in range(len(row.geometry)):
@@ -187,7 +187,7 @@ def to_pixelcoords(
         w_poly, h_poly = (maxx - minx, maxy - miny)
     except (TypeError, ValueError):
         raise Exception(
-            f"reference_bounds needs to be a tuple or rasterio bounding box instance."
+            "reference_bounds needs to be a tuple or rasterio bounding box instance."
         )
 
     # Subtract point of origin of image bbox.
@@ -196,16 +196,16 @@ def to_pixelcoords(
         [[x - minx, y - miny] for x, y in zip(x_coords, y_coords)]
     )
 
-    if scale is False:
-        return p_origin
-    elif scale is True:
+    if scale is True:
         if ncols is None or nrows is None:
             raise ValueError("ncols and nrows required for scale")
         x_scaler = ncols / w_poly
         y_scaler = nrows / h_poly
-        return shapely.affinity.scale(
+        p_origin = shapely.affinity.scale(
             p_origin, xfact=x_scaler, yfact=y_scaler, origin=(0, 0, 0)
         )
+
+    return p_origin
 
 
 def reduce_precision(poly: Polygon, precision: int = 3) -> Polygon:

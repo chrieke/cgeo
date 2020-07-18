@@ -6,12 +6,13 @@ from functools import wraps
 from urllib.request import urlopen
 import sys
 from concurrent.futures import as_completed, ThreadPoolExecutor
+import json
 
 import pandas as pd
-import json
 import numpy as np
 import PIL
 from IPython.display import display
+from line_profiler import LineProfiler
 
 
 def new_save(out_path: Path, data, file_format: str = "pickle"):
@@ -99,8 +100,6 @@ def lprun(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        from line_profiler import LineProfiler
-
         prof = LineProfiler()
         try:
             return prof(func)(*args, **kwargs)

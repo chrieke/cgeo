@@ -4,3 +4,4 @@ geopandas
 Pillow
 matplotlib
 descartes
+line_profiler
