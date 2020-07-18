@@ -8,16 +8,13 @@ disable=
     too-few-public-methods,
     missing-final-newline,
     too-many-boolean-expressions,
+    unsubscriptable-object,
+    no-member,
+    fixme,
     bad-continuation,
-    invalid-name,
-    super-init-not-called,
-    inconsistent-return-statements,
-    too-many-arguments,
-    too-many-locals,
-    protected-access,
-    redefined-outer-name,
-    too-many-instance-attributes,
-    fixme
+    duplicate-code,
+    logging-fstring-interpolation,
+    logging-format-interpolation
 
 [FORMAT]
 max-line-length=120
@@ -35,7 +32,4 @@ ignored-argument-names=_.*|self
 
 [SIMILARITIES]
 # Minimum lines number of a similarity.
-min-similarity-lines=20
-ignore-comments=yes
-ignore-docstrings=yes
-ignore-imports=no
+min-similarity-lines=7

@@ -1,4 +1,9 @@
+pytest
+mypy
+pytest-mypy
+pytest-cov
+pytest-pylint
+pyfakefs
 black
 jupyterlab
 matplotlib
-shapely
