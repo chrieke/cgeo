@@ -14,11 +14,39 @@ import PIL
 from IPython.display import display
 from line_profiler import LineProfiler
 
+BAND_NAMES = {
+    "sentinel2": {
+        "B01": "coastal",
+        "B02": "blue",
+        "B03": "green",
+        "B04": "red",
+        "B05": "rededge_1",
+        "B06": "rededge_2",
+        "B07": "rededge_3",
+        "B08": "nir",
+        "B8A": "watervapour",
+        "B10": "cirrus",
+        "B11": "swir_1",
+        "B12": "swir_2",
+        "SLC": "slc",
+    },
+    "landsat8": {},
+    "fmask": {
+        "clear_land_pixel": 0,
+        "clear_water_pixel": 1,
+        "cloud_shadow": 2,
+        "snow": 3,
+        "cloud": 4,
+        "no_observation": 255,
+    },
+}
 
-def new_save(out_path: Path, data, file_format: str = "pickle"):
+
+def new_save(out_path: Union[str, Path], data, file_format: str = "pickle"):
     """
     (Over)write data to new pickle/json file.
     """
+    out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if file_format == "pickle":
         with open(out_path, "wb") as f:
