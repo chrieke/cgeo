@@ -1,11 +1,10 @@
-from typing import Union, Any, Callable, Dict, Iterable, List
+from typing import Union, Any, Callable, Dict, List
 from pathlib import Path
 import pickle
 import time
 from functools import wraps
 from urllib.request import urlopen
 import sys
-from concurrent.futures import as_completed, ThreadPoolExecutor
 import json
 
 import pandas as pd
@@ -213,92 +212,93 @@ def track_time(task):
     print(task.status())
 
 
-def get_bands_in_folder(indir: Union[Path, str], sensor="sentinel2") -> pd.DataFrame:
-    """
-    Collects Sentinel-2 or Landsat-8 band file information in input directory to a
-    pandas dataframe.
+# def get_bands_in_folder(indir: Union[Path, str], sensor="sentinel2") -> pd.DataFrame:
+#     """
+#     Collects Sentinel-2 or Landsat-8 band file information in input directory to a
+#     pandas dataframe.
+#
+#     Expects SAFE format filenames, but arbitrary (sub)folder structure. Works with both
+#     tiff or jp2 format.
+#
+#     Args:
+#         indir: input directory. Arbitrary (sub)folder structure.
+#         sensor: Satellite sensor, `sentinel2`, `landsat8`, 'fmask'
+#
+#     Returns:
+#         pandas dataframe. The columns time and tile are multi-index.
+#     Examples usages of results dataframe:
+#         - df.reset_index() # Dissolves multi-index (every row has every value)
+#         - for date, new_df in df.groupby(level=0):  # loop over dates, return
+#             "subdataframe" per date.
+#         - dates_list = df_layers_all.index.get_level_values(0).unique()
+#     """
+#     band_names = BAND_NAMES[sensor]
+#     paths = Path(indir).rglob("*.[jt][pi][2f]")
+#     # Drop non-relevant bands e.g. quality bands and other resolutions.
+#     paths = [
+#         path
+#         for path in paths
+#         if any(f"_{x}_10m" in str(path) for x in band_names.keys())
+#     ]  # type: ignore
+#     stems = [path.stem for path in paths]
+#
+#     time_tile_sid_band = [
+#         (
+#             stem.split("_")[2].split("T")[0],  # 20171020
+#             stem.split("_")[1][1:],  # 32ULB
+#             stem.split("_")[3],  # B07
+#         )
+#         for stem in stems
+#     ]
+#     df_layers = pd.DataFrame(time_tile_sid_band, columns=["time", "tile", "band"])
+#     df_layers.loc["time"] = pd.to_datetime(df_layers.time)
+#     df_layers.loc["band_name"] = [band_names[band] for band in df_layers.band]
+#     df_layers.loc["file"] = [str(path) for path in paths]  # type: ignore
+#     df_layers = df_layers.set_index(["time", "tile", "band", "band_name"])
+#
+#     return df_layers
 
-    Expects SAFE format filenames, but arbitrary (sub)folder structure. Works with both
-    tiff or jp2 format.
 
-    Args:
-        indir: input directory. Arbitrary (sub)folder structure.
-        sensor: Satellite sensor, `sentinel2`, `landsat8`, 'fmask'
-
-    Returns:
-        pandas dataframe. The columns time and tile are multi-index.
-    Examples usages of results dataframe:
-        - df.reset_index() # Dissolves multi-index (every row has every value)
-        - for date, new_df in df.groupby(level=0):  # loop over dates, return
-            "subdataframe" per date.
-        - dates_list = df_layers_all.index.get_level_values(0).unique()
-    """
-    band_names = BAND_NAMES[sensor]
-    paths = Path(indir).rglob("*.[jt][pi][2f]")
-    # Drop non-relevant bands e.g. quality bands and other resolutions.
-    paths = [
-        path
-        for path in paths
-        if any(f"_{x}_10m" in str(path) for x in band_names.keys())
-    ]
-    stems = [path.stem for path in paths]
-
-    time_tile_sid_band = [
-        (
-            stem.split("_")[2].split("T")[0],  # 20171020
-            stem.split("_")[1][1:],  # 32ULB
-            stem.split("_")[3],  # B07
-        )
-        for stem in stems
-    ]
-    df_layers = pd.DataFrame(time_tile_sid_band, columns=["time", "tile", "band"])
-    df_layers["time"] = pd.to_datetime(df_layers.time)
-    df_layers["band_name"] = [band_names[band] for band in df_layers.band]
-    df_layers["file"] = [str(path) for path in paths]
-    df_layers = df_layers.set_index(["time", "tile", "band", "band_name"])
-
-    return df_layers
-
-
-def multithread_iterable(
-    func: Callable, iterable: Iterable, func_kwargs: Dict = None, max_workers: int = 2
-):
-    """Wrapper for simplified multithreading of iterable.
-
-    Uses concurrent.futures.ThreadPoolExecutor instead of manually spinning up threads
-    via the threading module.
-
-    Args:
-        func: callable function.
-        iterable: list, generator etc. that should be iterated over via one thread per
-            iteration. If the iterable yields a tuple,
-        func_kwargs: additional function arguments.
-        max_workers: number of threads.
-
-    Returns:
-        The function return value in a list.
-
-    Example:
-        def task(i, iter, add=2):   # i and iter are required arguments!
-            print("Processing {}".format(i))
-            return iter*iter + add
-        print(multithreading(func=task, iterable=[2,3,4], func_kwargs={'add':10},
-            max_workers=2))
-    """
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        if not isinstance(iterable, tuple):
-            futures = [
-                executor.submit(func, i, iter, **func_kwargs)
-                for i, iter in enumerate(iterable)
-            ]
-        else:
-            futures = [
-                executor.submit(func, i, *iter, **func_kwargs)
-                for i, iter in enumerate(iterable)
-            ]
-
-        res = [fut.result() for fut in as_completed(futures)]
-        return res
+# def multithread_iterable(
+#     func: Callable, iterable: Iterable, func_kwargs: Dict = None, max_workers: int = 2
+# ):
+#     """Wrapper for simplified multithreading of iterable.
+#
+#     Uses concurrent.futures.ThreadPoolExecutor instead of manually spinning up threads
+#     via the threading module.
+#
+#     Args:
+#         func: callable function.
+#         iterable: list, generator etc. that should be iterated over via one thread per
+#             iteration. If the iterable yields a tuple,
+#         func_kwargs: additional function arguments.
+#         max_workers: number of threads.
+#
+#     Returns:
+#         The function return value in a list.
+#
+#     Example:
+#         def task(i, iter, add=2):   # i and iter are required arguments!
+#             print("Processing {}".format(i))
+#             return iter*iter + add
+#         print(multithreading(func=task, iterable=[2,3,4], func_kwargs={'add':10},
+#             max_workers=2))
+#     """
+#     from concurrent.futures import as_completed, ThreadPoolExecutor
+#     with ThreadPoolExecutor(max_workers=max_workers) as executor:
+#         if not isinstance(iterable, tuple):
+#             futures = [
+#                 executor.submit(func, i, iter, **func_kwargs)
+#                 for i, iter in enumerate(iterable)
+#             ]
+#         else:
+#             futures = [
+#                 executor.submit(func, i, *iter, **func_kwargs)
+#                 for i, iter in enumerate(iterable)
+#             ]
+#
+#         res = [fut.result() for fut in as_completed(futures)]
+#         return res
 
 
 def roman_numbers_to_arrays(
