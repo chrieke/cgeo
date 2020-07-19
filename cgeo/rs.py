@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List
 
 import numpy as np
 
@@ -7,49 +7,38 @@ class Indices:
     """
     Provides various remote sensing indices from numpy arrays.
 
-    Currently implemented: ndvi, evi, ndwi, brightness
-    # TODO: Add more indices
-
-    Args:
-        bands_names: List of band names. E.g. ['coastal', 'blue', 'green', 'red', 'rededge', 'nir', 'swir']
-        array: 3d input numpy array image. Channel order must correspond to the order in input_bands_names.
-
-    Returns:
-        Results index numpy array
-
     Example:
         Indices(band_names=['red', 'nir'], array=np.array([[0.5, 0,1], [0.7, 02]]).ndvi()
     """
 
-    def __init__(self, bands_names: List[str], array: np.ndarray):
-        self.input_band_names = bands_names
-        for i, band_name in enumerate(bands_names):
-            setattr(self, band_name, array[i])
-
-    def ndvi(self):
-        nir = self.nir.astype(np.float32)
-        red = self.red.astype(np.float32)
+    @staticmethod
+    def ndvi(nir, red):
+        nir = nir.astype(np.float32)
+        red = red.astype(np.float32)
         ndvi = ((nir) - (red)) / ((nir) + (red))
         return ndvi
 
-    def evi(self):
-        nir = self.nir.astype(np.float32)
-        red = self.red.astype(np.float32)
-        blue = self.blue.astype(np.float32)
+    @staticmethod
+    def evi(nir, red, blue):
+        nir = nir.astype(np.float32)
+        red = red.astype(np.float32)
+        blue = blue.astype(np.float32)
         evi = 2.5 * ((nir - red) / (nir + 6 * red - 7.5 * blue + 1))
         return evi
 
-    def ndwi(self):
-        swir = self.swir.astype(np.float32)
-        nir = self.nir.astype(np.float32)
+    @staticmethod
+    def ndwi(swir, nir):
+        swir = swir.astype(np.float32)
+        nir = nir.astype(np.float32)
         index = (nir - swir) / (nir + swir)
         return index
 
-    def brightness(self):
-        swir = self.swir.astype(np.float32)
-        nir = self.nir.astype(np.float32)
-        red = self.red.astype(np.float32)
-        green = self.green.astype(np.float32)
+    @staticmethod
+    def brightness(swir, nir, red, green):
+        swir = swir.astype(np.float32)
+        nir = nir.astype(np.float32)
+        red = red.astype(np.float32)
+        green = green.astype(np.float32)
         brightness = np.sqrt(
             np.power(green, 2) + np.power(red, 2) + np.power(nir, 2) + np.power(swir, 2)
         )
@@ -92,5 +81,5 @@ class Sensors:
         band_combinations = {"S2": {"RGB": [4, 3, 2]}, "L8": {}, "S1": {}}
         self.band_combinations = band_combinations
 
-    def bands_info(self) -> Dict:
+    def bands_info(self):
         return self.sensor_bands[self.sensor]
