@@ -3,7 +3,7 @@ from typing import List, Dict
 import numpy as np
 
 
-class Indices(object):
+class Indices:
     """
     Provides various remote sensing indices from numpy arrays.
 
@@ -56,7 +56,7 @@ class Indices(object):
         return brightness
 
 
-class Sensors(object):
+class Sensors:
     """Provides sensor-specific band information, band combinations and metadata
 
     # TODO: Add more info

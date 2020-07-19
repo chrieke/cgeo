@@ -52,21 +52,21 @@ def new_save(out_path: Union[str, Path], data, file_format: str = "pickle"):
         with open(out_path, "wb") as f:
             pickle.dump(data, f)
     elif file_format == "json":
-        with open(out_path, "w") as f:
-            json.dump(data, f, indent=4)
+        with open(out_path, "w") as f:  # type: ignore
+            json.dump(data, f, indent=4)  # type: ignore
     print(f"Writing new {file_format} file... {out_path.name}")
 
 
-def load_saved(in_path: Path, file_format: str = "pickle"):
+def load_saved(in_path: Union[str, Path], file_format: str = "pickle"):
     """
     Load saved pickle/json file.
     """
-
+    in_path = Path(in_path)
     if file_format == "pickle":
         with open(in_path, "rb") as f:
             data = pickle.load(f)
     elif file_format == "json":
-        with open(in_path, "r") as f:
+        with open(in_path, "r") as f:  # type: ignore
             data = json.load(f)
     print(f"Loading from {file_format} file... {in_path.name}")
     return data
@@ -146,10 +146,10 @@ def printfull(df):
         display(df)
 
 
+# pylint: disable=redefined-builtin
 def sizeof_memvariables(locals):
     """
     Prints size of all variables in memory in human readable output.
-    
     By Fred Cirera, after https://stackoverflow.com/a/1094933/1870254
     """
 
@@ -178,6 +178,7 @@ def download_url(url, out_path):
         local_file.write(urlopen(url).read())
 
 
+# pylint: disable=redefined-builtin
 def print_file_tree(dir: Path = None):
     """
     Print file tree of the selected directory.
@@ -212,7 +213,7 @@ def track_time(task):
     print(task.status())
 
 
-def get_bands_in_folder(indir: Union[Path, str], sensor="s2") -> pd.DataFrame:
+def get_bands_in_folder(indir: Union[Path, str], sensor="sentinel2") -> pd.DataFrame:
     """
     Collects Sentinel-2 or Landsat-8 band file information in input directory to a
     pandas dataframe.
@@ -222,7 +223,7 @@ def get_bands_in_folder(indir: Union[Path, str], sensor="s2") -> pd.DataFrame:
 
     Args:
         indir: input directory. Arbitrary (sub)folder structure.
-        sensor: Satellite sensor, sentinel-2 's2' or landsat-8 'l8'
+        sensor: Satellite sensor, `sentinel2`, `landsat8`, 'fmask'
 
     Returns:
         pandas dataframe. The columns time and tile are multi-index.
@@ -232,39 +233,13 @@ def get_bands_in_folder(indir: Union[Path, str], sensor="s2") -> pd.DataFrame:
             "subdataframe" per date.
         - dates_list = df_layers_all.index.get_level_values(0).unique()
     """
-    band_names_s2 = {
-        "B01": "coastal",
-        "B02": "blue",
-        "B03": "green",
-        "B04": "red",
-        "B05": "rededge_1",
-        "B06": "rededge_2",
-        "B07": "rededge_3",
-        "B08": "nir",
-        "B8A": "watervapour",
-        "B10": "cirrus",
-        "B11": "swir_1",
-        "B12": "swir_2",
-        "SLC": "slc",
-    }
-
-    band_names_l8 = {}
-
-    band_names_fmask = {
-        "clear_land_pixel": 0,
-        "clear_water_pixel": 1,
-        "cloud_shadow": 2,
-        "snow": 3,
-        "cloud": 4,
-        "no_observation": 255,
-    }
-
+    band_names = BAND_NAMES[sensor]
     paths = Path(indir).rglob("*.[jt][pi][2f]")
     # Drop non-relevant bands e.g. quality bands and other resolutions.
     paths = [
         path
         for path in paths
-        if any(f"_{x}_10m" in str(path) for x in band_names_s2.keys())
+        if any(f"_{x}_10m" in str(path) for x in band_names.keys())
     ]
     stems = [path.stem for path in paths]
 
@@ -278,7 +253,7 @@ def get_bands_in_folder(indir: Union[Path, str], sensor="s2") -> pd.DataFrame:
     ]
     df_layers = pd.DataFrame(time_tile_sid_band, columns=["time", "tile", "band"])
     df_layers["time"] = pd.to_datetime(df_layers.time)
-    df_layers["band_name"] = [band_names_s2[band] for band in df_layers.band]
+    df_layers["band_name"] = [band_names[band] for band in df_layers.band]
     df_layers["file"] = [str(path) for path in paths]
     df_layers = df_layers.set_index(["time", "tile", "band", "band_name"])
 
@@ -327,7 +302,7 @@ def multithread_iterable(
 
 
 def roman_numbers_to_arrays(
-    text_list: List[str], fontsize: int = 12, display=True
+    text_list: List[str], fontsize: int = 12, printout=True
 ) -> List[np.array]:
     """
     Create binary arrays displaying Roman numbers.
@@ -337,7 +312,7 @@ def roman_numbers_to_arrays(
     Args:
         text_list: List of Roman numbers as string. Defaults to I-X.
         fontsize: Should be at least 12, otherwise deformations
-        display: In addition to returning the arrays plot them.
+        printout: Simple development charcater visualization.
 
     Returns:
         List of binary numpy arrays, all with the same dimensions.
@@ -370,7 +345,7 @@ def roman_numbers_to_arrays(
         w, h = font.getsize(text)  # calc the size of text in pixels
         h *= 2
         widths.append(w)
-    w, h = max(widths), h
+    w = max(widths)
 
     arrays = []
     for text in text_list:
@@ -382,7 +357,7 @@ def roman_numbers_to_arrays(
         arr = arr[(arr != 0).any(axis=1)]
         arrays.append(arr)
 
-        if display is True:
+        if printout is True:
             result = np.where(arr, "#", " ")
             print("shape", arr.shape)
             print("\n".join(["".join(row) for row in result]))

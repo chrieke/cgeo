@@ -14,7 +14,7 @@ disable=
     bad-continuation,
     duplicate-code,
     logging-fstring-interpolation,
-    logging-format-interpolation
+    logging-format-interpolation,
     too-many-locals
 
 [FORMAT]

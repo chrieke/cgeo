@@ -81,6 +81,8 @@ def format_coco(chip_dfs: Dict, chip_width: int, chip_height: int):
                 "name": "agfields_singleclass",
             }
         ],
+        "images": [],
+        "annotations": [],
     }
 
     annotation_id = 1
@@ -98,8 +100,7 @@ def format_coco(chip_dfs: Dict, chip_width: int, chip_height: int):
             "height": chip_width,
             "width": chip_height,
         }
-        cocojson.setdefault("images", [])
-        cocojson["images"].append(image)
+        cocojson["images"] = cocojson["images"].append(image)  # type: ignore
 
         for _, row in chip_dfs[chip_name]["chip_df"].iterrows():
             # Convert geometry to COCO segmentation format:
@@ -133,8 +134,7 @@ def format_coco(chip_dfs: Dict, chip_width: int, chip_height: int):
                 "iscrowd": 0,
                 "segmentation": [coco_xy],
             }
-            cocojson.setdefault("annotations", [])
-            cocojson["annotations"].append(annotation)
+            cocojson["images"] = cocojson["annotations"].append(annotation)  # type: ignore
 
             annotation_id += 1
 
@@ -170,7 +170,7 @@ def coco_to_shapely(
         Dictionary of image key and shapely Multipolygon.
     """
 
-    data = cgeo.other.load_json(inpath_json)
+    data = cgeo.other.load_saved(inpath_json, file_format="json")
     if categories is not None:
         # Get image ids/file names that contain at least one annotation of the selected categories.
         image_ids = sorted(
@@ -183,7 +183,7 @@ def coco_to_shapely(
             )
         )
     else:
-        image_ids = sorted(list(set([x["image_id"] for x in data["annotations"]])))
+        image_ids = sorted(list({x["image_id"] for x in data["annotations"]}))
     file_names = [x["file_name"] for x in data["images"] if x["id"] in image_ids]
 
     # Extract selected annotations per image.
